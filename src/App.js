@@ -1,4 +1,3 @@
-// frontend/src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
 import { FaBars, FaSearch } from 'react-icons/fa';
@@ -12,7 +11,6 @@ import './App.css';
 
 const BASE_URL = 'https://meowsite-backend-production.up.railway.app';
 
-// Дочерний компонент, который будет использовать useNavigate
 function AppContent() {
   const [recipes, setRecipes] = React.useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
@@ -26,7 +24,7 @@ function AppContent() {
   const [recentlyViewed, setRecentlyViewed] = React.useState([]);
   const [recommendedRecipes, setRecommendedRecipes] = React.useState([]);
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = React.useState(false);
-  const navigate = useNavigate(); // Теперь useNavigate используется внутри Router
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     fetchRecipes();
@@ -39,12 +37,40 @@ function AppContent() {
     }
   }, []);
 
+  // Функция для выполнения запросов с автоматическим обновлением токена
+  const fetchWithAuth = async (url, options = {}) => {
+    let token = localStorage.getItem('accessToken');
+    if (!token) throw new Error('Токен отсутствует, пожалуйста, авторизуйтесь');
+
+    options.headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`,
+    };
+
+    let response = await fetch(url, options);
+    if (response.status === 401) {
+      // Токен истёк, пытаемся обновить
+      try {
+        token = await refreshToken();
+        options.headers['Authorization'] = `Bearer ${token}`;
+        response = await fetch(url, options); // Повторяем запрос с новым токеном
+      } catch (error) {
+        console.error('Не удалось обновить токен:', error);
+        handleLogout(); // Выходим, если обновление токена не удалось
+        throw error;
+      }
+    }
+
+    if (!response.ok) throw new Error('Ошибка сети');
+    return response.json();
+  };
+
   const fetchRecipes = async () => {
     try {
-      const response = await fetch(`${BASE_URL}/api/recipes/`);
-      if (!response.ok) throw new Error('Ошибка сети');
-      const data = await response.json();
-      const updatedRecipes = data.map(recipe => ({
+      const data = await fetch(`${BASE_URL}/api/recipes/`);
+      if (!data.ok) throw new Error('Ошибка сети');
+      const json = await data.json();
+      const updatedRecipes = json.map(recipe => ({
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
       }));
@@ -56,10 +82,10 @@ function AppContent() {
 
   const fetchRecommendedRecipes = async () => {
     try {
-      const response = await fetch(`${BASE_URL}/api/recipes/`);
-      if (!response.ok) throw new Error('Ошибка сети');
-      const data = await response.json();
-      const updatedRecipes = data.slice(0, 5).map(recipe => ({
+      const data = await fetch(`${BASE_URL}/api/recipes/`);
+      if (!data.ok) throw new Error('Ошибка сети');
+      const json = await data.json();
+      const updatedRecipes = json.slice(0, 5).map(recipe => ({
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
       }));
@@ -73,11 +99,7 @@ function AppContent() {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
     try {
-      const response = await fetch(`${BASE_URL}/api/search-history/`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Ошибка сети');
-      const data = await response.json();
+      const data = await fetchWithAuth(`${BASE_URL}/api/search-history/`);
       setSearchHistory(data);
     } catch (error) {
       console.error("Ошибка получения истории поиска:", error);
@@ -88,11 +110,7 @@ function AppContent() {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
     try {
-      const response = await fetch(`${BASE_URL}/api/recently-viewed/`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Ошибка сети');
-      const data = await response.json();
+      const data = await fetchWithAuth(`${BASE_URL}/api/recently-viewed/`);
       const updatedRecentlyViewed = data.map(item => ({
         ...item.recipe,
         image: item.recipe.image ? `${BASE_URL}${item.recipe.image}` : '/default-image.jpg',
@@ -108,11 +126,10 @@ function AppContent() {
     const token = localStorage.getItem('accessToken');
     if (token) {
       try {
-        await fetch(`${BASE_URL}/api/search-history/`, {
+        await fetchWithAuth(`${BASE_URL}/api/search-history/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({ query }),
         });
@@ -131,8 +148,8 @@ function AppContent() {
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
       }));
-      if (callback) callback(updatedRecipes); // Передаём результаты в SearchPage
-      navigate(`/search?query=${query}`); // Навигация без перезагрузки
+      if (callback) callback(updatedRecipes);
+      navigate(`/search?query=${query}`);
     } catch (error) {
       console.error("Ошибка выполнения поиска:", error);
     }
@@ -151,7 +168,7 @@ function AppContent() {
   const refreshToken = async () => {
     const refresh = localStorage.getItem('refreshToken');
     if (!refresh) {
-      return Promise.reject('Нет токена обновления');
+      throw new Error('Нет токена обновления');
     }
 
     try {
@@ -167,9 +184,6 @@ function AppContent() {
       return data.access;
     } catch (error) {
       console.error('Ошибка обновления токена:', error);
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      navigate('/');
       throw error;
     }
   };
@@ -177,6 +191,7 @@ function AppContent() {
   const handleLogin = (userData) => {
     setUser(userData);
     localStorage.setItem('accessToken', userData.accessToken);
+    localStorage.setItem('refreshToken', userData.refreshToken); // Убедитесь, что сохраняете refreshToken
     localStorage.setItem('username', userData.username);
   };
 
@@ -185,6 +200,7 @@ function AppContent() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('username');
     localStorage.removeItem('refreshToken');
+    navigate('/');
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -207,18 +223,10 @@ function AppContent() {
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         method: method,
-        headers: {
-          Authorization: `Bearer ${user.accessToken}`,
-        },
         body: formData,
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(`Ошибка сохранения рецепта: ${response.status} - ${JSON.stringify(err)}`);
-      }
-      const data = await response.json();
       setShowForm(false);
       fetchRecipes();
     } catch (error) {
@@ -227,13 +235,10 @@ function AppContent() {
   };
 
   const deleteRecipe = async (recipeId) => {
-    const token = localStorage.getItem('accessToken');
     try {
-      const response = await fetch(`${BASE_URL}/api/recipes/${recipeId}/`, {
+      await fetchWithAuth(`${BASE_URL}/api/recipes/${recipeId}/`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!response.ok) throw new Error('Ошибка удаления');
       setRecipes(prev => prev.filter(r => r.id !== recipeId));
     } catch (error) {
       console.error("Ошибка удаления рецепта:", error);
@@ -267,7 +272,6 @@ function AppContent() {
         setIsRegisterModalOpen={setIsRegisterModalOpen}
       />
       <div className={`main-content ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-        {/* Поисковая строка */}
         <div className="search-container">
           <form onSubmit={handleSearchSubmit} className="search-form">
             <div className="search-input-wrapper">
@@ -285,7 +289,6 @@ function AppContent() {
           </form>
           {isSearchDropdownOpen && (
             <div className="search-dropdown">
-              {/* Недавние запросы */}
               {searchHistory.length > 0 && (
                 <div className="dropdown-section">
                   <h4>Недавние запросы</h4>
@@ -302,7 +305,6 @@ function AppContent() {
                   </ul>
                 </div>
               )}
-              {/* Недавно просмотренные рецепты */}
               {recentlyViewed.length > 0 && (
                 <div className="dropdown-section">
                   <h4>Недавно просмотренные</h4>
@@ -320,7 +322,6 @@ function AppContent() {
                   </ul>
                 </div>
               )}
-              {/* Рекомендованные рецепты */}
               {recommendedRecipes.length > 0 && (
                 <div className="dropdown-section">
                   <h4>Рекомендуем</h4>
@@ -397,7 +398,6 @@ function AppContent() {
   );
 }
 
-// Основной компонент, который только оборачивает в Router
 function App() {
   return (
     <Router>

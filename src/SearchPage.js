@@ -4,14 +4,16 @@ import RecipeCard from './RecipeCard';
 
 function SearchPage({ user, onSearch }) {
   const [searchResults, setSearchResults] = useState([]);
+  const [lastQuery, setLastQuery] = useState('');
   const location = useLocation();
 
   useEffect(() => {
     const query = new URLSearchParams(location.search).get('query');
-    if (query) {
-      onSearch(query, setSearchResults); // Вызываем onSearch только при изменении query
+    if (query && query !== lastQuery) {
+      setLastQuery(query);
+      onSearch(query, setSearchResults);
     }
-  }, [location.search, onSearch]); // Зависимость только от location.search
+  }, [location.search, onSearch]);
 
   return (
     <div className="search-page">
