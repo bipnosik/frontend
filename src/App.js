@@ -1,6 +1,6 @@
 // frontend/src/App.js
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom'; // Добавляем useNavigate
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
 import { FaBars, FaSearch } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import RecipeCard from './RecipeCard';
@@ -12,22 +12,23 @@ import './App.css';
 
 const BASE_URL = 'https://meowsite-backend-production.up.railway.app';
 
-function App() {
-  const [recipes, setRecipes] = useState([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingRecipe, setEditingRecipe] = useState(null);
-  const [user, setUser] = useState(null);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchHistory, setSearchHistory] = useState([]);
-  const [recentlyViewed, setRecentlyViewed] = useState([]);
-  const [recommendedRecipes, setRecommendedRecipes] = useState([]);
-  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
-  const navigate = useNavigate(); // Добавляем хук для навигации
+// Дочерний компонент, который будет использовать useNavigate
+function AppContent() {
+  const [recipes, setRecipes] = React.useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+  const [showForm, setShowForm] = React.useState(false);
+  const [editingRecipe, setEditingRecipe] = React.useState(null);
+  const [user, setUser] = React.useState(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchHistory, setSearchHistory] = React.useState([]);
+  const [recentlyViewed, setRecentlyViewed] = React.useState([]);
+  const [recommendedRecipes, setRecommendedRecipes] = React.useState([]);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = React.useState(false);
+  const navigate = useNavigate(); // Теперь useNavigate используется внутри Router
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchRecipes();
     fetchRecommendedRecipes();
     const token = localStorage.getItem('accessToken');
@@ -393,6 +394,15 @@ function App() {
         </Routes>
       </div>
     </div>
+  );
+}
+
+// Основной компонент, который только оборачивает в Router
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
 
