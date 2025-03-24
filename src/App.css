@@ -1,8 +1,13 @@
+/* frontend/src/App.css */
+
+/* Основной контейнер приложения */
 .App {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
+
+/* Кнопка переключения боковой панели */
 .toggle-btn {
   background: #4CAF50; /* Зелёный, как в интерфейсе */
   border: none;
@@ -18,10 +23,12 @@
   z-index: 1100; /* Выше модального окна */
   border-radius: 0 0 4px 0; /* Закругление справа снизу */
 }
+
 .toggle-btn:hover {
   background: #45a049;
 }
 
+/* Логотип приложения */
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -33,6 +40,7 @@
   }
 }
 
+/* Заголовок приложения */
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -44,10 +52,12 @@
   color: white;
 }
 
+/* Ссылка в приложении */
 .App-link {
   color: #61dafb;
 }
 
+/* Анимация вращения логотипа */
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
@@ -56,6 +66,8 @@
     transform: rotate(360deg);
   }
 }
+
+/* Основной контент */
 .main-content {
   flex: 1; /* Занимает оставшееся пространство */
   margin-left: 250px; /* Смещение влево, чтобы не перекрывать открытую панель */
@@ -63,9 +75,12 @@
   transition: margin-left 0.3s ease; /* Плавное смещение */
   background-color: #f5f5f5;
 }
+
 .main-content.sidebar-closed {
   margin-left: 0; /* Когда панель закрыта, контент занимает всю ширину */
 }
+
+/* Боковая панель */
 .sidebar {
   width: 250px; /* Фиксированная ширина открытой панели */
   transition: transform 0.3s ease; /* Плавное анимационное смещение */
@@ -77,6 +92,7 @@
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   z-index: 1000;
 }
+
 .sidebar.closed {
   transform: translateX(-100%); /* Скрываем панель за левым краем */
 }
@@ -84,11 +100,15 @@
 .sidebar.open {
   transform: translateX(0); /* Показываем панель */
 }
+
+/* Карточка рецепта */
 .recipe-card {
   width: 230px;
   margin: 10px;
   /* Дополнительные стили, если нужно */
 }
+
+/* Модальное окно */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -97,4 +117,93 @@
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
+}
+
+/* Стили для поисковой строки и выпадающего меню */
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.search-form {
+  width: 100%;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  color: #888;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 20px 12px 40px;
+  border: none;
+  border-radius: 25px;
+  background-color: #f1f1f1;
+  font-size: 16px;
+  outline: none;
+  transition: background-color 0.3s;
+}
+
+.search-input:focus {
+  background-color: #e1e1e1;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.dropdown-section {
+  margin-bottom: 20px;
+}
+
+.dropdown-section h4 {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.dropdown-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.dropdown-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-right: 10px;
 }

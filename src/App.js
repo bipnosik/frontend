@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { FaBars } from 'react-icons/fa';
+import { FaBars, FaSearch } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import RecipeCard from './RecipeCard';
 import RecipeDetails from './RecipeDetails';
@@ -8,7 +8,7 @@ import RecipeForm from './RecipeForm';
 import SearchPage from './SearchPage';
 import FavoritesPage from './FavoritesPage';
 import './App.css';
-// sadsdadsM
+
 const BASE_URL = 'https://meowsite-backend-production.up.railway.app';
 
 function App() {
@@ -19,12 +19,20 @@ function App() {
   const [user, setUser] = useState(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
+  const [recommendedRecipes, setRecommendedRecipes] = useState([]);
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchRecipes();
+    fetchRecommendedRecipes();
     const token = localStorage.getItem('accessToken');
     if (token) {
       setUser({ accessToken: token, username: localStorage.getItem('username') });
+      fetchSearchHistory();
+      fetchRecentlyViewed();
     }
   }, []);
 
@@ -38,29 +46,79 @@ function App() {
         }));
         setRecipes(updatedRecipes);
       })
-      .catch(error => console.error("Error fetching recipes:", error));
+      .catch(error => console.error("Ошибка получения рецептов:", error));
   };
 
-  const handleSearch = (query, setSearchResults) => {
-    fetch(`${BASE_URL}/api/recipes/?search=${query}`)
-      .then(response => {
-        if (!response.ok) throw new Error('Search failed');
-        return response.json();
-      })
+  const fetchRecommendedRecipes = () => {
+    fetch(`${BASE_URL}/api/recipes/`) // Можно добавить сортировку по популярности
+      .then(response => response.json())
       .then(data => {
-        const updatedResults = data.map(recipe => ({
+        const updatedRecipes = data.slice(0, 5).map(recipe => ({
           ...recipe,
           image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
         }));
-        setSearchResults(updatedResults);
+        setRecommendedRecipes(updatedRecipes);
       })
-      .catch(error => console.error("Error searching recipes:", error));
+      .catch(error => console.error("Ошибка получения рекомендованных рецептов:", error));
+  };
+
+  const fetchSearchHistory = () => {
+    const token = localStorage.getItem('accessToken');
+    fetch(`${BASE_URL}/api/search-history/`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then(response => response.json())
+      .then(data => setSearchHistory(data))
+      .catch(error => console.error("Ошибка получения истории поиска:", error));
+  };
+
+  const fetchRecentlyViewed = () => {
+    const token = localStorage.getItem('accessToken');
+    fetch(`${BASE_URL}/api/recently-viewed/`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then(response => response.json())
+      .then(data => {
+        const updatedRecentlyViewed = data.map(item => ({
+          ...item.recipe,
+          image: item.recipe.image ? `${BASE_URL}${item.recipe.image}` : '/default-image.jpg',
+        }));
+        setRecentlyViewed(updatedRecentlyViewed);
+      })
+      .catch(error => console.error("Ошибка получения недавно просмотренных:", error));
+  };
+
+  const handleSearch = (query) => {
+    if (!query) return;
+    const token = localStorage.getItem('accessToken');
+    fetch(`${BASE_URL}/api/search-history/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ query }),
+    })
+      .then(() => fetchSearchHistory())
+      .catch(error => console.error("Ошибка сохранения поискового запроса:", error));
+
+    window.location.href = `/search?query=${query}`;
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    handleSearch(searchQuery);
+  };
+
+  const handleHistoryClick = (query) => {
+    setSearchQuery(query);
+    handleSearch(query);
   };
 
   const refreshToken = () => {
     const refresh = localStorage.getItem('refreshToken');
     if (!refresh) {
-      return Promise.reject('No refresh token');
+      return Promise.reject('Нет токена обновления');
     }
 
     return fetch(`${BASE_URL}/api/token/refresh/`, {
@@ -69,7 +127,7 @@ function App() {
       body: JSON.stringify({ refresh }),
     })
       .then(response => {
-        if (!response.ok) throw new Error('Refresh token failed');
+        if (!response.ok) throw new Error('Ошибка обновления токена');
         return response.json();
       })
       .then(data => {
@@ -78,7 +136,7 @@ function App() {
         return data.access;
       })
       .catch(error => {
-        console.error('Error refreshing token:', error);
+        console.error('Ошибка обновления токена:', error);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         window.location.href = '/';
@@ -128,7 +186,7 @@ function App() {
       .then(response => {
         if (!response.ok) {
           return response.json().then(err => {
-            throw new Error(`Failed to save recipe: ${response.status} - ${JSON.stringify(err)}`);
+            throw new Error(`Ошибка сохранения рецепта: ${response.status} - ${JSON.stringify(err)}`);
           });
         }
         return response.json();
@@ -137,7 +195,7 @@ function App() {
         setShowForm(false);
         fetchRecipes();
       })
-      .catch(error => console.error('Error saving recipe:', error));
+      .catch(error => console.error('Ошибка сохранения рецепта:', error));
   };
 
   const deleteRecipe = (recipeId) => {
@@ -147,10 +205,10 @@ function App() {
       headers: { 'Authorization': `Bearer ${token}` },
     })
       .then(response => {
-        if (!response.ok) throw new Error('Failed to delete');
+        if (!response.ok) throw new Error('Ошибка удаления');
         setRecipes(prev => prev.filter(r => r.id !== recipeId));
       })
-      .catch(error => console.error("Error deleting recipe:", error));
+      .catch(error => console.error("Ошибка удаления рецепта:", error));
   };
 
   const toggleForm = (recipe = null) => {
@@ -181,7 +239,82 @@ function App() {
           setIsRegisterModalOpen={setIsRegisterModalOpen}
         />
         <div className={`main-content ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-          <h1>Try it today</h1>
+          {/* Поисковая строка */}
+          <div className="search-container">
+            <form onSubmit={handleSearchSubmit} className="search-form">
+              <div className="search-input-wrapper">
+                <FaSearch className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Поиск рецептов, ингредиентов..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchDropdownOpen(true)}
+                  onBlur={() => setTimeout(() => setIsSearchDropdownOpen(false), 200)}
+                  className="search-input"
+                />
+              </div>
+            </form>
+            {isSearchDropdownOpen && (
+              <div className="search-dropdown">
+                {/* Недавние запросы */}
+                {searchHistory.length > 0 && (
+                  <div className="dropdown-section">
+                    <h4>Недавние запросы</h4>
+                    <ul>
+                      {searchHistory.slice(0, 5).map((item, index) => (
+                        <li
+                          key={index}
+                          onClick={() => handleHistoryClick(item.query)}
+                          className="dropdown-item"
+                        >
+                          {item.query}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {/* Недавно просмотренные рецепты */}
+                {recentlyViewed.length > 0 && (
+                  <div className="dropdown-section">
+                    <h4>Недавно просмотренные</h4>
+                    <ul>
+                      {recentlyViewed.map((recipe, index) => (
+                        <li
+                          key={index}
+                          onClick={() => (window.location.href = `/recipe/${recipe.id}`)}
+                          className="dropdown-item"
+                        >
+                          <img src={recipe.image} alt={recipe.name} className="dropdown-image" />
+                          {recipe.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {/* Рекомендованные рецепты */}
+                {recommendedRecipes.length > 0 && (
+                  <div className="dropdown-section">
+                    <h4>Рекомендуем</h4>
+                    <ul>
+                      {recommendedRecipes.map((recipe, index) => (
+                        <li
+                          key={index}
+                          onClick={() => (window.location.href = `/recipe/${recipe.id}`)}
+                          className="dropdown-item"
+                        >
+                          <img src={recipe.image} alt={recipe.name} className="dropdown-image" />
+                          {recipe.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <h1>Попробуйте сегодня</h1>
           {user && (
             <>
               {showForm && (
