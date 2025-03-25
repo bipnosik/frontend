@@ -1,5 +1,6 @@
+// frontend/src/Sidebar.js
 import React, { useState } from 'react';
-import { FaHome, FaSearch, FaUser, FaHeart, FaClipboardList, FaPlus } from 'react-icons/fa';
+import { FaHome, FaSearch, FaUser, FaHeart, FaPlus, FaBars } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import './Sidebar.css';
 import defaultAvatar from './assets/image_12901130200388967001.gif';
@@ -70,12 +71,51 @@ function Sidebar({
 
   return (
     <div className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
-      <div className="sidebar-content">
+      <div className="sidebar-header">
         <div className="user-info">
           <div className="avatar">
             <img src={defaultAvatar} alt="User Avatar" />
           </div>
-          <p className="username">{user ? user.username : 'Guest'}</p>
+          <span className="username">{user ? user.username : 'Guest'}</span>
+        </div>
+        <button className="toggle-btn" onClick={toggleSidebar}>
+          <FaBars />
+        </button>
+      </div>
+      <div className="sidebar-content">
+        <nav>
+          <ul>
+            <li>
+              <Link to="/" className="nav-link">
+                <FaHome className="nav-icon" />
+                <span className="nav-text">Home</span>
+              </Link>
+            </li>
+            <li>
+              <Link to="/search" className="nav-link">
+                <FaSearch className="nav-icon" />
+                <span className="nav-text">Browse</span>
+              </Link>
+            </li>
+            <li>
+              <Link to="/profile" className="nav-link">
+                <FaUser className="nav-icon" />
+                <span className="nav-text">Profile</span>
+              </Link>
+            </li>
+            <li>
+              <Link to="/favorites" className="nav-link">
+                <FaHeart className="nav-icon" />
+                <span className="nav-text">Favorites</span>
+              </Link>
+            </li>
+            <li onClick={onAddRecipe} className="nav-link">
+              <FaPlus className="nav-icon" />
+              <span className="nav-text">Add Recipe</span>
+            </li>
+          </ul>
+        </nav>
+        <div className="sidebar-footer">
           {user ? (
             <button className="sidebar-btn logout-btn" onClick={onLogout}>
               Logout
@@ -91,44 +131,6 @@ function Sidebar({
             </div>
           )}
         </div>
-        <nav>
-          <ul>
-            <li>
-              <Link to="/" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
-                <FaHome />
-                <span className="nav-text">Home</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/search" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
-                <FaSearch />
-                <span className="nav-text">Browse</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/profile" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
-                <FaUser />
-                <span className="nav-text">Profile</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/favorites" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
-                <FaHeart />
-                <span className="nav-text">Favorites</span>
-              </Link>
-            </li>
-            <li>
-              <Link to="/my-recipes" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center' }}>
-                <FaClipboardList />
-                <span className="nav-text">My Recipes</span>
-              </Link>
-            </li>
-            <li onClick={onAddRecipe} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-              <FaPlus />
-              <span className="nav-text">Add Recipe</span>
-            </li>
-          </ul>
-        </nav>
       </div>
 
       {/* Модальное окно логина */}

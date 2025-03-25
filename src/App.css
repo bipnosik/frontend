@@ -5,121 +5,82 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-}
-
-/* Кнопка переключения боковой панели */
-.toggle-btn {
-  background: #4CAF50; /* Зелёный, как в интерфейсе */
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 10px;
-  color: #fff;
-  width: 50px;
-  height: 50px;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1100; /* Выше модального окна */
-  border-radius: 0 0 4px 0; /* Закругление справа снизу */
-}
-
-.toggle-btn:hover {
-  background: #45a049;
-}
-
-/* Логотип приложения */
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-/* Заголовок приложения */
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-/* Ссылка в приложении */
-.App-link {
-  color: #61dafb;
-}
-
-/* Анимация вращения логотипа */
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  font-family: 'Inter', sans-serif;
 }
 
 /* Основной контент */
 .main-content {
-  flex: 1; /* Занимает оставшееся пространство */
-  margin-left: 250px; /* Смещение влево, чтобы не перекрывать открытую панель */
-  padding: 20px;
-  transition: margin-left 0.3s ease; /* Плавное смещение */
-  background-color: #f5f5f5;
+  flex: 1;
+  margin-left: 200px;
+  padding: 30px;
+  transition: margin-left 0.3s ease;
+  background-color: #fafafa;
 }
 
 .main-content.sidebar-closed {
-  margin-left: 0; /* Когда панель закрыта, контент занимает всю ширину */
+  margin-left: 60px;
 }
 
 /* Боковая панель */
 .sidebar {
-  width: 250px; /* Фиксированная ширина открытой панели */
-  transition: transform 0.3s ease; /* Плавное анимационное смещение */
+  width: 200px;
+  transition: width 0.3s ease;
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
   background-color: #fff;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
   z-index: 1000;
-}
-
-.sidebar.closed {
-  transform: translateX(-100%); /* Скрываем панель за левым краем */
-}
-
-.sidebar.open {
-  transform: translateX(0); /* Показываем панель */
 }
 
 /* Карточка рецепта */
 .recipe-card {
   width: 230px;
-  margin: 10px;
-  /* Дополнительные стили, если нужно */
+  margin: 15px;
+  background-color: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: transform 0.2s;
+  position: relative; /* Для позиционирования сердечка */
 }
 
-/* Модальное окно */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+.recipe-card:hover {
+  transform: translateY(-5px);
 }
 
-/* Стили для поисковой строки и выпадающего меню */
+.recipe-card-image-container {
+  position: relative;
+}
+
+.recipe-card-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.favorite-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.favorite-icon {
+  font-size: 20px;
+  color: #ccc;
+  transition: color 0.2s;
+}
+
+.favorite-icon.active {
+  color: #ff69b4; /* Розовый цвет для активного сердечка */
+}
+
+/* Поисковая строка */
 .search-container {
   position: relative;
   width: 100%;
@@ -206,4 +167,23 @@
   object-fit: cover;
   border-radius: 5px;
   margin-right: 10px;
+}
+
+/* Модальное окно */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Заголовок страницы */
+h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 20px;
 }

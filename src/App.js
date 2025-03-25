@@ -1,6 +1,7 @@
+// frontend/src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
-import { FaBars, FaSearch } from 'react-icons/fa';
+import { FaBars, FaSearch, FaHeart } from 'react-icons/fa'; // Добавляем FaHeart для избранного
 import Sidebar from './Sidebar';
 import RecipeCard from './RecipeCard';
 import RecipeDetails from './RecipeDetails';
@@ -37,7 +38,6 @@ function AppContent() {
     }
   }, []);
 
-  // Функция для выполнения запросов с автоматическим обновлением токена
   const fetchWithAuth = async (url, options = {}) => {
     let token = localStorage.getItem('accessToken');
     if (!token) throw new Error('Токен отсутствует, пожалуйста, авторизуйтесь');
@@ -49,14 +49,13 @@ function AppContent() {
 
     let response = await fetch(url, options);
     if (response.status === 401) {
-      // Токен истёк, пытаемся обновить
       try {
         token = await refreshToken();
         options.headers['Authorization'] = `Bearer ${token}`;
-        response = await fetch(url, options); // Повторяем запрос с новым токеном
+        response = await fetch(url, options);
       } catch (error) {
         console.error('Не удалось обновить токен:', error);
-        handleLogout(); // Выходим, если обновление токена не удалось
+        handleLogout();
         throw error;
       }
     }
@@ -139,7 +138,6 @@ function AppContent() {
       }
     }
 
-    // Выполняем поиск
     try {
       const response = await fetch(`${BASE_URL}/api/recipes/?search=${query}`);
       if (!response.ok) throw new Error('Ошибка сети');
@@ -191,7 +189,7 @@ function AppContent() {
   const handleLogin = (userData) => {
     setUser(userData);
     localStorage.setItem('accessToken', userData.accessToken);
-    localStorage.setItem('refreshToken', userData.refreshToken); // Убедитесь, что сохраняете refreshToken
+    localStorage.setItem('refreshToken', userData.refreshToken);
     localStorage.setItem('username', userData.username);
   };
 
@@ -256,9 +254,6 @@ function AppContent() {
 
   return (
     <div className="App">
-      <button className="toggle-btn" onClick={toggleSidebar}>
-        <FaBars />
-      </button>
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
