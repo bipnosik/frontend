@@ -21,31 +21,28 @@ function Sidebar({
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
 
-  const handleLoginSubmit = (e) => {
+const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    fetch(`${process.env.REACT_APP_API_URL}/api/token/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        if (data.access && data.refresh) {
-          onLogin({ accessToken: data.access, username });
-          localStorage.setItem('accessToken', data.access);
-          localStorage.setItem('refreshToken', data.refresh);
-          setUsername('');
-          setPassword('');
-          setIsLoginModalOpen(false);
-        } else {
-          alert('Ошибка авторизации: токены не получены');
-          console.log('Login response:', data);
-        }
-      })
-      .catch(error => console.error('Ошибка:', error));
-  };
+    try {
+        const response = await fetch(`${BASE_URL}/api/token/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(loginData),
+        });
+        if (!response.ok) throw new Error('Ошибка входа');
+        const data = await response.json();
+        onLogin({
+            accessToken: data.access,
+            refreshToken: data.refresh,
+            username: loginData.username,
+        });
+        setIsLoginModalOpen(false);
+        setLoginData({ username: '', password: '' });
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка входа. Проверьте имя пользователя и пароль.');
+    }
+};
 
   const handleRegisterSubmit = (e) => {
     e.preventDefault();

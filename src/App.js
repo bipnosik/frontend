@@ -1,7 +1,7 @@
 // frontend/src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
-import { FaBars, FaSearch, FaHeart } from 'react-icons/fa'; // Добавляем FaHeart для избранного
+import { FaBars, FaSearch, FaHeart } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import RecipeCard from './RecipeCard';
 import RecipeDetails from './RecipeDetails';
@@ -66,12 +66,14 @@ function AppContent() {
 
   const fetchRecipes = async () => {
     try {
-      const data = await fetch(`${BASE_URL}/api/recipes/`);
-      if (!data.ok) throw new Error('Ошибка сети');
-      const json = await data.json();
+      const response = await fetch(`${BASE_URL}/api/recipes/`);
+      if (!response.ok) throw new Error('Ошибка сети');
+      const json = await response.json();
       const updatedRecipes = json.map(recipe => ({
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
+        step_images: recipe.step_images.map(img => `${BASE_URL}${img}`),
+        user: recipe.user ? recipe.user.username : null, // Убедимся, что user — это строка (username)
       }));
       setRecipes(updatedRecipes);
     } catch (error) {
@@ -81,12 +83,14 @@ function AppContent() {
 
   const fetchRecommendedRecipes = async () => {
     try {
-      const data = await fetch(`${BASE_URL}/api/recipes/`);
-      if (!data.ok) throw new Error('Ошибка сети');
-      const json = await data.json();
+      const response = await fetch(`${BASE_URL}/api/recipes/`);
+      if (!response.ok) throw new Error('Ошибка сети');
+      const json = await response.json();
       const updatedRecipes = json.slice(0, 5).map(recipe => ({
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
+        step_images: recipe.step_images.map(img => `${BASE_URL}${img}`),
+        user: recipe.user ? recipe.user.username : null,
       }));
       setRecommendedRecipes(updatedRecipes);
     } catch (error) {
@@ -113,6 +117,8 @@ function AppContent() {
       const updatedRecentlyViewed = data.map(item => ({
         ...item.recipe,
         image: item.recipe.image ? `${BASE_URL}${item.recipe.image}` : '/default-image.jpg',
+        step_images: item.recipe.step_images.map(img => `${BASE_URL}${img}`),
+        user: item.recipe.user ? item.recipe.user.username : null,
       }));
       setRecentlyViewed(updatedRecentlyViewed);
     } catch (error) {
@@ -145,6 +151,8 @@ function AppContent() {
       const updatedRecipes = data.map(recipe => ({
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
+        step_images: recipe.step_images.map(img => `${BASE_URL}${img}`),
+        user: recipe.user ? recipe.user.username : null,
       }));
       if (callback) callback(updatedRecipes);
       navigate(`/search?query=${query}`);
@@ -191,6 +199,8 @@ function AppContent() {
     localStorage.setItem('accessToken', userData.accessToken);
     localStorage.setItem('refreshToken', userData.refreshToken);
     localStorage.setItem('username', userData.username);
+    fetchSearchHistory();
+    fetchRecentlyViewed();
   };
 
   const handleLogout = () => {
@@ -198,33 +208,30 @@ function AppContent() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('username');
     localStorage.removeItem('refreshToken');
+    setSearchHistory([]);
+    setRecentlyViewed([]);
     navigate('/');
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  const saveRecipe = async (recipeData) => {
+  const saveRecipe = async (formData) => {
     const method = editingRecipe && editingRecipe.id ? 'PUT' : 'POST';
     const url = editingRecipe && editingRecipe.id
       ? `${BASE_URL}/api/recipes/${editingRecipe.id}/`
       : `${BASE_URL}/api/recipes/`;
 
-    const formData = new FormData();
-    formData.append('name', recipeData.name);
-    formData.append('description', recipeData.description);
-    formData.append('ingredients', recipeData.ingredients);
-    formData.append('instructions', recipeData.instructions);
-    formData.append('cooking_time', recipeData.cooking_time || 25);
-    formData.append('calories', recipeData.calories || 145);
-    if (recipeData.image) {
-      formData.append('image', recipeData.image);
-    }
-
     try {
-      const response = await fetchWithAuth(url, {
+      const response = await fetch(url, {
         method: method,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
         body: formData,
       });
+      if (!response.ok) {
+        throw new Error('Ошибка сохранения рецепта');
+      }
       setShowForm(false);
       fetchRecipes();
     } catch (error) {
@@ -234,9 +241,15 @@ function AppContent() {
 
   const deleteRecipe = async (recipeId) => {
     try {
-      await fetchWithAuth(`${BASE_URL}/api/recipes/${recipeId}/`, {
+      const response = await fetch(`${BASE_URL}/api/recipes/${recipeId}/`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
       });
+      if (!response.ok) {
+        throw new Error('Ошибка удаления рецепта');
+      }
       setRecipes(prev => prev.filter(r => r.id !== recipeId));
     } catch (error) {
       console.error("Ошибка удаления рецепта:", error);

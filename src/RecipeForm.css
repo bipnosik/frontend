@@ -1,3 +1,4 @@
+/* frontend/src/RecipeForm.css */
 .recipe-form-overlay {
   position: fixed;
   top: 0;
@@ -15,7 +16,7 @@
   background: #fff;
   padding: 20px;
   border-radius: 8px;
-  width: 500px;
+  width: 600px;
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -45,6 +46,71 @@
 .form-group textarea {
   height: 100px;
   resize: vertical;
+}
+
+.ingredient-input,
+.attribute-input {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ingredient-input input,
+.attribute-input input {
+  flex: 1;
+}
+
+.ingredient-input button,
+.attribute-input button {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ingredient-input button:disabled,
+.attribute-input button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.ingredient-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dashed #ddd; /* Пунктирное подчёркивание */
+}
+
+.step-images-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.step-image-input {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-image-input span {
+  background-color: #4CAF50;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 50%;
+  margin-bottom: 5px;
+}
+
+.form-group button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
 }
 
 .form-buttons {
