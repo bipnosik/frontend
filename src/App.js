@@ -9,8 +9,7 @@ import RecipeForm from './RecipeForm';
 import SearchPage from './SearchPage';
 import FavoritesPage from './FavoritesPage';
 import './App.css';
-
-const BASE_URL = 'https://meowsite-backend-production.up.railway.app';
+import { BASE_URL } from './config';
 
 function AppContent() {
   const [recipes, setRecipes] = React.useState([]);
@@ -72,12 +71,17 @@ function AppContent() {
       const updatedRecipes = json.map(recipe => ({
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
-        step_images: recipe.step_images.map(img => `${BASE_URL}${img}`),
-        user: recipe.user ? recipe.user.username : null, // Убедимся, что user — это строка (username)
+        step_images: Array.isArray(recipe.step_images)
+          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
+          : [],
+        user: recipe.user ? recipe.user.username : null,
+        attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
+        ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
       }));
       setRecipes(updatedRecipes);
     } catch (error) {
       console.error("Ошибка получения рецептов:", error);
+      setRecipes([]);
     }
   };
 
@@ -89,12 +93,17 @@ function AppContent() {
       const updatedRecipes = json.slice(0, 5).map(recipe => ({
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
-        step_images: recipe.step_images.map(img => `${BASE_URL}${img}`),
+        step_images: Array.isArray(recipe.step_images)
+          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
+          : [],
         user: recipe.user ? recipe.user.username : null,
+        attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
+        ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
       }));
       setRecommendedRecipes(updatedRecipes);
     } catch (error) {
       console.error("Ошибка получения рекомендованных рецептов:", error);
+      setRecommendedRecipes([]);
     }
   };
 
@@ -103,9 +112,10 @@ function AppContent() {
     if (!token) return;
     try {
       const data = await fetchWithAuth(`${BASE_URL}/api/search-history/`);
-      setSearchHistory(data);
+      setSearchHistory(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Ошибка получения истории поиска:", error);
+      setSearchHistory([]);
     }
   };
 
@@ -114,15 +124,24 @@ function AppContent() {
     if (!token) return;
     try {
       const data = await fetchWithAuth(`${BASE_URL}/api/recently-viewed/`);
-      const updatedRecentlyViewed = data.map(item => ({
-        ...item.recipe,
-        image: item.recipe.image ? `${BASE_URL}${item.recipe.image}` : '/default-image.jpg',
-        step_images: item.recipe.step_images.map(img => `${BASE_URL}${img}`),
-        user: item.recipe.user ? item.recipe.user.username : null,
-      }));
+      const updatedRecentlyViewed = Array.isArray(data)
+        ? data.map(item => ({
+            ...item.recipe,
+            image: item.recipe?.image ? `${BASE_URL}${item.recipe.image}` : '/default-image.jpg',
+            step_images: Array.isArray(item.recipe?.step_images)
+              ? item.recipe.step_images.map(img => `${BASE_URL}${img}`)
+              : [],
+            user: item.recipe?.user ? item.recipe.user.username : null,
+            attributes: Array.isArray(item.recipe?.attributes) ? item.recipe.attributes : [],
+            ingredients_list: Array.isArray(item.recipe?.ingredients_list)
+              ? item.recipe.ingredients_list
+              : [],
+          }))
+        : [];
       setRecentlyViewed(updatedRecentlyViewed);
     } catch (error) {
       console.error("Ошибка получения недавно просмотренных:", error);
+      setRecentlyViewed([]);
     }
   };
 
@@ -133,9 +152,7 @@ function AppContent() {
       try {
         await fetchWithAuth(`${BASE_URL}/api/search-history/`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query }),
         });
         fetchSearchHistory();
@@ -151,8 +168,12 @@ function AppContent() {
       const updatedRecipes = data.map(recipe => ({
         ...recipe,
         image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
-        step_images: recipe.step_images.map(img => `${BASE_URL}${img}`),
+        step_images: Array.isArray(recipe.step_images)
+          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
+          : [],
         user: recipe.user ? recipe.user.username : null,
+        attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
+        ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
       }));
       if (callback) callback(updatedRecipes);
       navigate(`/search?query=${query}`);
@@ -173,9 +194,7 @@ function AppContent() {
 
   const refreshToken = async () => {
     const refresh = localStorage.getItem('refreshToken');
-    if (!refresh) {
-      throw new Error('Нет токена обновления');
-    }
+    if (!refresh) throw new Error('Нет токена обновления');
 
     try {
       const response = await fetch(`${BASE_URL}/api/token/refresh/`, {
@@ -229,9 +248,7 @@ function AppContent() {
         },
         body: formData,
       });
-      if (!response.ok) {
-        throw new Error('Ошибка сохранения рецепта');
-      }
+      if (!response.ok) throw new Error('Ошибка сохранения рецепта');
       setShowForm(false);
       fetchRecipes();
     } catch (error) {
@@ -247,9 +264,7 @@ function AppContent() {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
-      if (!response.ok) {
-        throw new Error('Ошибка удаления рецепта');
-      }
+      if (!response.ok) throw new Error('Ошибка удаления рецепта');
       setRecipes(prev => prev.filter(r => r.id !== recipeId));
     } catch (error) {
       console.error("Ошибка удаления рецепта:", error);
@@ -258,11 +273,11 @@ function AppContent() {
 
   const toggleForm = (recipe = null) => {
     if (!user && !recipe) {
-      alert('Пожалуйста, авторизуйтесь, чтобы добавить рецепт!');
+      setIsLoginModalOpen(true);
       return;
     }
     setEditingRecipe(recipe);
-    setShowForm(!showForm);
+    setShowForm(prev => !prev);
   };
 
   return (
@@ -297,7 +312,7 @@ function AppContent() {
           </form>
           {isSearchDropdownOpen && (
             <div className="search-dropdown">
-              {searchHistory.length > 0 && (
+              {Array.isArray(searchHistory) && searchHistory.length > 0 && (
                 <div className="dropdown-section">
                   <h4>Недавние запросы</h4>
                   <ul>
@@ -313,7 +328,7 @@ function AppContent() {
                   </ul>
                 </div>
               )}
-              {recentlyViewed.length > 0 && (
+              {Array.isArray(recentlyViewed) && recentlyViewed.length > 0 && (
                 <div className="dropdown-section">
                   <h4>Недавно просмотренные</h4>
                   <ul>
@@ -330,7 +345,7 @@ function AppContent() {
                   </ul>
                 </div>
               )}
-              {recommendedRecipes.length > 0 && (
+              {Array.isArray(recommendedRecipes) && recommendedRecipes.length > 0 && (
                 <div className="dropdown-section">
                   <h4>Рекомендуем</h4>
                   <ul>

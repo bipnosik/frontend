@@ -9,15 +9,26 @@ function RecipeForm({ onSave, onClose, initialRecipe }) {
   const [image, setImage] = useState(null);
   const [stepImages, setStepImages] = useState(Array(10).fill(null));
   const [instructions, setInstructions] = useState('');
-  const [attributes, setAttributes] = useState([{ name: 'calories', value: '415 kcal' }, { name: 'cooking time', value: '25 mins' }]);
+  const [attributes, setAttributes] = useState([
+    { name: 'calories', value: '415 kcal' },
+    { name: 'cooking time', value: '25 mins' },
+  ]);
 
   useEffect(() => {
     if (initialRecipe) {
       setName(initialRecipe.name || '');
       setDescription(initialRecipe.description || '');
-      setIngredients(initialRecipe.ingredients_list.length > 0 ? initialRecipe.ingredients_list : ['']);
+      setIngredients(
+        Array.isArray(initialRecipe.ingredients_list) && initialRecipe.ingredients_list.length > 0
+          ? initialRecipe.ingredients_list
+          : ['']
+      );
       setInstructions(initialRecipe.instructions || '');
-      setAttributes(initialRecipe.attributes.length > 0 ? initialRecipe.attributes : [{ name: 'calories', value: '415 kcal' }, { name: 'cooking time', value: '25 mins' }]);
+      setAttributes(
+        Array.isArray(initialRecipe.attributes) && initialRecipe.attributes.length > 0
+          ? initialRecipe.attributes
+          : [{ name: 'calories', value: '415 kcal' }, { name: 'cooking time', value: '25 mins' }]
+      );
     }
   }, [initialRecipe]);
 
@@ -131,7 +142,11 @@ function RecipeForm({ onSave, onClose, initialRecipe }) {
                 onChange={(e) => handleIngredientChange(index, e.target.value)}
                 required
               />
-              <button type="button" onClick={() => removeIngredient(index)} disabled={ingredients.length === 1}>
+              <button
+                type="button"
+                onClick={() => removeIngredient(index)}
+                disabled={ingredients.length === 1}
+              >
                 Remove
               </button>
             </div>
@@ -184,7 +199,11 @@ function RecipeForm({ onSave, onClose, initialRecipe }) {
                 onChange={(e) => handleAttributeChange(index, 'value', e.target.value)}
                 required
               />
-              <button type="button" onClick={() => removeAttribute(index)} disabled={attributes.length === 1}>
+              <button
+                type="button"
+                onClick={() => removeAttribute(index)}
+                disabled={attributes.length === 1}
+              >
                 Remove
               </button>
             </div>
@@ -205,7 +224,9 @@ function RecipeForm({ onSave, onClose, initialRecipe }) {
 
         <div className="form-buttons">
           <button type="submit" className="save-btn">Save</button>
-          <button type="button" className="cancel-btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="cancel-btn" onClick={onClose}>
+            Cancel
+          </button>
         </div>
       </form>
     </div>

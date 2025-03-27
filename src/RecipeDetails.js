@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import './RecipeDetails.css';
-
-const BASE_URL = 'https://meowsite-backend-production.up.railway.app';
+import { BASE_URL } from './config';
 
 function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
   const { id } = useParams();
@@ -13,11 +12,13 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
   const [selectedImage, setSelectedImage] = useState('');
 
   useEffect(() => {
-    // Загружаем данные рецепта
     fetch(`${BASE_URL}/api/recipes/${id}/`)
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) throw new Error('Ошибка загрузки рецепта');
+        return response.json();
+      })
       .then(data => {
-        console.log('Данные рецепта:', data); // Для отладки
+        console.log('Данные рецепта:', data);
         const updatedRecipe = {
           ...data,
           image: data.image
@@ -25,22 +26,32 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
               ? data.image
               : `${BASE_URL}${data.image}`
             : '/default-image.jpg',
-          step_images: data.step_images
+          step_images: Array.isArray(data.step_images)
             ? data.step_images.map(img =>
                 img.startsWith('http') ? img : `${BASE_URL}${img}`
               )
             : [],
+          attributes: Array.isArray(data.attributes) ? data.attributes : [],
+          ingredients_list: Array.isArray(data.ingredients_list) ? data.ingredients_list : [],
         };
         setRecipe(updatedRecipe);
-        setSelectedImage(updatedRecipe.image); // Устанавливаем главное изображение по умолчанию
+        setSelectedImage(updatedRecipe.image);
       })
-      .catch(error => console.error('Ошибка загрузки рецепта:', error));
+      .catch(error => {
+        console.error('Ошибка загрузки рецепта:', error);
+        setRecipe({ step_images: [], attributes: [], ingredients_list: [] });
+      });
 
-    // Загружаем комментарии
     fetch(`${BASE_URL}/api/comments/?recipe=${id}`)
-      .then(response => response.json())
-      .then(data => setComments(data))
-      .catch(error => console.error('Ошибка загрузки комментариев:', error));
+      .then(response => {
+        if (!response.ok) throw new Error('Ошибка загрузки комментариев');
+        return response.json();
+      })
+      .then(data => setComments(Array.isArray(data) ? data : []))
+      .catch(error => {
+        console.error('Ошибка загрузки комментариев:', error);
+        setComments([]);
+      });
   }, [id]);
 
   const handleCommentSubmit = (e) => {
@@ -59,11 +70,8 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
       body: JSON.stringify({ recipe: id, text: newComment }),
     })
       .then(response => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          throw new Error('Ошибка при отправке комментария');
-        }
+        if (!response.ok) throw new Error('Ошибка при отправке комментария');
+        return response.json();
       })
       .then(data => {
         setComments([...comments, data]);
@@ -76,15 +84,11 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
     setSelectedImage(image);
   };
 
-  if (!recipe) return <div>Recipe not found</div>;
+  if (!recipe) return <div>Загрузка...</div>;
 
-  // Парсим ингредиенты, чтобы разделить количество и название
   const parsedIngredients = recipe.ingredients_list.map(ingredient => {
-    const match = ingredient.match(/^(\d+\s*\w*)\s*(.*)$/); // Например, "2 cups flour" → ["2 cups", "flour"]
-    if (match) {
-      return { quantity: match[1], name: match[2] };
-    }
-    return { quantity: '', name: ingredient }; // Если формат не соответствует, показываем только название
+    const match = ingredient.match(/^(\d+\s*\w*)\s*(.*)$/);
+    return match ? { quantity: match[1], name: match[2] } : { quantity: '', name: ingredient };
   });
 
   return (
@@ -99,16 +103,20 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
             <p>{recipe.description}</p>
           </div>
           <div className="recipe-attributes">
-            {recipe.attributes.map((attr, index) => (
-              <span key={index} className="attribute">
-                {attr.name}: {attr.value}
-              </span>
-            ))}
+            {Array.isArray(recipe.attributes) && recipe.attributes.length > 0 ? (
+              recipe.attributes.map((attr, index) => (
+                <span key={index} className="attribute">
+                  {attr.name}: {attr.value}
+                </span>
+              ))
+            ) : (
+              <p>Атрибуты отсутствуют</p>
+            )}
           </div>
         </div>
         <div className="recipe-details-right">
           <div className="step-images-container">
-            {recipe.step_images.length > 0 ? (
+            {Array.isArray(recipe.step_images) && recipe.step_images.length > 0 ? (
               recipe.step_images.map((image, index) => (
                 <div
                   key={index}
@@ -126,20 +134,28 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
           <div className="ingredients-container">
             <h3>Ингредиенты</h3>
             <div className="ingredients-list">
-              {parsedIngredients.map((ingredient, index) => (
-                <div key={index} className="ingredient-item">
-                  <span className="ingredient-quantity">{ingredient.quantity}</span>
-                  <span className="ingredient-name">{ingredient.name}</span>
-                </div>
-              ))}
+              {parsedIngredients.length > 0 ? (
+                parsedIngredients.map((ingredient, index) => (
+                  <div key={index} className="ingredient-item">
+                    <span className="ingredient-quantity">{ingredient.quantity}</span>
+                    <span className="ingredient-name">{ingredient.name}</span>
+                  </div>
+                ))
+              ) : (
+                <p>Ингредиенты отсутствуют</p>
+              )}
             </div>
           </div>
           <div className="instructions-container">
             <h3>Инструкции</h3>
             <ol className="instructions-list">
-              {recipe.instructions.split('\n').map((step, index) => (
-                <li key={index}>{step}</li>
-              ))}
+              {recipe.instructions && recipe.instructions.split('\n').length > 0 ? (
+                recipe.instructions.split('\n').map((step, index) => (
+                  <li key={index}>{step}</li>
+                ))
+              ) : (
+                <p>Инструкции отсутствуют</p>
+              )}
             </ol>
           </div>
         </div>
@@ -150,7 +166,10 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
         {comments.length > 0 ? (
           comments.map(comment => (
             <div key={comment.id} className="comment">
-              <p><strong>{comment.author}</strong> ({new Date(comment.created_at).toLocaleString()})</p>
+              <p>
+                <strong>{comment.author}</strong> (
+                {new Date(comment.created_at).toLocaleString()})
+              </p>
               <p>{comment.text}</p>
             </div>
           ))

@@ -4,9 +4,7 @@ import { FaHome, FaSearch, FaUser, FaHeart, FaPlus, FaBars } from 'react-icons/f
 import { Link } from 'react-router-dom';
 import './Sidebar.css';
 import defaultAvatar from './assets/image_12901130200388967001.gif';
-
-const BASE_URL = 'http://127.0.0.1:8000'; // Для локального сервера
-// const BASE_URL = 'https://meowsite-backend-production.up.railway.app'; // Для продакшен-сервера
+import { BASE_URL } from './config'; // Импортируем BASE_URL из config.js
 
 function Sidebar({
   isOpen,
@@ -32,7 +30,10 @@ function Sidebar({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      if (!response.ok) throw new Error('Ошибка входа');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Ошибка входа: ${errorData.detail || response.statusText}`);
+      }
       const data = await response.json();
       onLogin({
         accessToken: data.access,
@@ -43,8 +44,8 @@ function Sidebar({
       setUsername('');
       setPassword('');
     } catch (error) {
-      console.error('Ошибка:', error);
-      alert('Ошибка входа. Проверьте имя пользователя и пароль.');
+      console.error('Ошибка:', error.message);
+      alert(`Ошибка входа: ${error.message}`);
     }
   };
 
@@ -56,7 +57,10 @@ function Sidebar({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, email }),
       });
-      if (!response.ok) throw new Error('Ошибка регистрации');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Ошибка регистрации: ${errorData.detail || response.statusText}`);
+      }
       const data = await response.json();
       alert('Регистрация успешна! Теперь войдите.');
       setIsRegisterModalOpen(false);
@@ -65,8 +69,8 @@ function Sidebar({
       setPassword('');
       setEmail('');
     } catch (error) {
-      console.error('Ошибка:', error);
-      alert('Ошибка регистрации. Проверьте данные.');
+      console.error('Ошибка:', error.message);
+      alert(`Ошибка регистрации: ${error.message}`);
     }
   };
 
