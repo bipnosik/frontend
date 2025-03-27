@@ -5,6 +5,9 @@ import { Link } from 'react-router-dom';
 import './Sidebar.css';
 import defaultAvatar from './assets/image_12901130200388967001.gif';
 
+const BASE_URL = 'http://127.0.0.1:8000'; // Для локального сервера
+// const BASE_URL = 'https://meowsite-backend-production.up.railway.app'; // Для продакшен-сервера
+
 function Sidebar({
   isOpen,
   toggleSidebar,
@@ -21,49 +24,50 @@ function Sidebar({
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
 
-const handleLoginSubmit = async (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     try {
-        const response = await fetch(`${BASE_URL}/api/token/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(loginData),
-        });
-        if (!response.ok) throw new Error('Ошибка входа');
-        const data = await response.json();
-        onLogin({
-            accessToken: data.access,
-            refreshToken: data.refresh,
-            username: loginData.username,
-        });
-        setIsLoginModalOpen(false);
-        setLoginData({ username: '', password: '' });
+      const response = await fetch(`${BASE_URL}/api/token/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!response.ok) throw new Error('Ошибка входа');
+      const data = await response.json();
+      onLogin({
+        accessToken: data.access,
+        refreshToken: data.refresh,
+        username: username,
+      });
+      setIsLoginModalOpen(false);
+      setUsername('');
+      setPassword('');
     } catch (error) {
-        console.error('Ошибка:', error);
-        alert('Ошибка входа. Проверьте имя пользователя и пароль.');
+      console.error('Ошибка:', error);
+      alert('Ошибка входа. Проверьте имя пользователя и пароль.');
     }
-};
+  };
 
-  const handleRegisterSubmit = (e) => {
+  const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    fetch(`${process.env.REACT_APP_API_URL}/api/register/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, email }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        if (data.access) {
-          onLogin({ accessToken: data.access, username });
-          setUsername('');
-          setPassword('');
-          setEmail('');
-          setIsRegisterModalOpen(false);
-        } else {
-          alert('Ошибка регистрации');
-        }
-      })
-      .catch(error => console.error('Ошибка:', error));
+    try {
+      const response = await fetch(`${BASE_URL}/api/register/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, email }),
+      });
+      if (!response.ok) throw new Error('Ошибка регистрации');
+      const data = await response.json();
+      alert('Регистрация успешна! Теперь войдите.');
+      setIsRegisterModalOpen(false);
+      setIsLoginModalOpen(true);
+      setUsername('');
+      setPassword('');
+      setEmail('');
+    } catch (error) {
+      console.error('Ошибка:', error);
+      alert('Ошибка регистрации. Проверьте данные.');
+    }
   };
 
   return (
