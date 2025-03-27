@@ -1,7 +1,7 @@
 // frontend/src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
-import { FaBars, FaSearch, FaHeart } from 'react-icons/fa';
+import { FaSearch } from 'react-icons/fa'; // Удалены неиспользуемые FaBars и FaHeart
 import Sidebar from './Sidebar';
 import RecipeCard from './RecipeCard';
 import RecipeDetails from './RecipeDetails';
@@ -26,88 +26,8 @@ function AppContent() {
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = React.useState(false);
   const navigate = useNavigate();
 
-  React.useEffect(() => {
-    fetchRecipes();
-    fetchRecommendedRecipes();
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      setUser({ accessToken: token, username: localStorage.getItem('username') });
-      fetchSearchHistory();
-      fetchRecentlyViewed();
-    }
-  }, []);
-
-  const fetchWithAuth = async (url, options = {}) => {
-    let token = localStorage.getItem('accessToken');
-    if (!token) throw new Error('Токен отсутствует, пожалуйста, авторизуйтесь');
-
-    options.headers = {
-      ...options.headers,
-      'Authorization': `Bearer ${token}`,
-    };
-
-    let response = await fetch(url, options);
-    if (response.status === 401) {
-      try {
-        token = await refreshToken();
-        options.headers['Authorization'] = `Bearer ${token}`;
-        response = await fetch(url, options);
-      } catch (error) {
-        console.error('Не удалось обновить токен:', error);
-        handleLogout();
-        throw error;
-      }
-    }
-
-    if (!response.ok) throw new Error('Ошибка сети');
-    return response.json();
-  };
-
-  const fetchRecipes = async () => {
-    try {
-      const response = await fetch(`${BASE_URL}/api/recipes/`);
-      if (!response.ok) throw new Error('Ошибка сети');
-      const json = await response.json();
-      const updatedRecipes = json.map(recipe => ({
-        ...recipe,
-        image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
-        step_images: Array.isArray(recipe.step_images)
-          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
-          : [],
-        user: recipe.user ? recipe.user.username : null,
-        attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
-        ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
-      }));
-      setRecipes(updatedRecipes);
-    } catch (error) {
-      console.error("Ошибка получения рецептов:", error);
-      setRecipes([]);
-    }
-  };
-
-  const fetchRecommendedRecipes = async () => {
-    try {
-      const response = await fetch(`${BASE_URL}/api/recipes/`);
-      if (!response.ok) throw new Error('Ошибка сети');
-      const json = await response.json();
-      const updatedRecipes = json.slice(0, 5).map(recipe => ({
-        ...recipe,
-        image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
-        step_images: Array.isArray(recipe.step_images)
-          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
-          : [],
-        user: recipe.user ? recipe.user.username : null,
-        attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
-        ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
-      }));
-      setRecommendedRecipes(updatedRecipes);
-    } catch (error) {
-      console.error("Ошибка получения рекомендованных рецептов:", error);
-      setRecommendedRecipes([]);
-    }
-  };
-
-  const fetchSearchHistory = async () => {
+  // Функции fetchSearchHistory и fetchRecentlyViewed определены до useEffect
+  const fetchSearchHistory = React.useCallback(async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
     try {
@@ -117,9 +37,9 @@ function AppContent() {
       console.error("Ошибка получения истории поиска:", error);
       setSearchHistory([]);
     }
-  };
+  }, []);
 
-  const fetchRecentlyViewed = async () => {
+  const fetchRecentlyViewed = React.useCallback(async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
     try {
@@ -143,6 +63,96 @@ function AppContent() {
       console.error("Ошибка получения недавно просмотренных:", error);
       setRecentlyViewed([]);
     }
+  }, []);
+
+  React.useEffect(() => {
+    fetchRecipes();
+    fetchRecommendedRecipes();
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      setUser({ accessToken: token, username: localStorage.getItem('username') });
+      fetchSearchHistory();
+      fetchRecentlyViewed();
+    }
+  }, [fetchSearchHistory, fetchRecentlyViewed]); // Добавлены зависимости
+
+  const fetchWithAuth = async (url, options = {}) => {
+    let token = localStorage.getItem('accessToken');
+    if (!token) throw new Error('Токен отсутствует, пожалуйста, авторизуйтесь');
+
+    options.headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`,
+    };
+
+    let response = await fetch(url, options);
+    if (response.status === 401) {
+      try {
+        token = await refreshToken();
+        options.headers['Authorization'] = `Bearer ${token}`;
+        response = await fetch(url, options);
+      } catch (error) {
+        console.error('Не удалось обновить токен:', error);
+        handleLogout();
+        throw error;
+      }
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Ошибка сети: ${errorText}`);
+    }
+    return response.json();
+  };
+
+  const fetchRecipes = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/recipes/`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка сети: ${errorText}`);
+      }
+      const json = await response.json();
+      const updatedRecipes = json.map(recipe => ({
+        ...recipe,
+        image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
+        step_images: Array.isArray(recipe.step_images)
+          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
+          : [],
+        user: recipe.user ? recipe.user.username : null,
+        attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
+        ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
+      }));
+      setRecipes(updatedRecipes);
+    } catch (error) {
+      console.error("Ошибка получения рецептов:", error);
+      setRecipes([]);
+    }
+  };
+
+  const fetchRecommendedRecipes = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/recipes/`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка сети: ${errorText}`);
+      }
+      const json = await response.json();
+      const updatedRecipes = json.slice(0, 5).map(recipe => ({
+        ...recipe,
+        image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
+        step_images: Array.isArray(recipe.step_images)
+          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
+          : [],
+        user: recipe.user ? recipe.user.username : null,
+        attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
+        ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
+      }));
+      setRecommendedRecipes(updatedRecipes);
+    } catch (error) {
+      console.error("Ошибка получения рекомендованных рецептов:", error);
+      setRecommendedRecipes([]);
+    }
   };
 
   const handleSearch = async (query, callback) => {
@@ -163,7 +173,10 @@ function AppContent() {
 
     try {
       const response = await fetch(`${BASE_URL}/api/recipes/?search=${query}`);
-      if (!response.ok) throw new Error('Ошибка сети');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка сети: ${errorText}`);
+      }
       const data = await response.json();
       const updatedRecipes = data.map(recipe => ({
         ...recipe,
@@ -202,7 +215,10 @@ function AppContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh }),
       });
-      if (!response.ok) throw new Error('Ошибка обновления токена');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка обновления токена: ${errorText}`);
+      }
       const data = await response.json();
       localStorage.setItem('accessToken', data.access);
       setUser({ accessToken: data.access, username: localStorage.getItem('username') });
@@ -240,15 +256,61 @@ function AppContent() {
       ? `${BASE_URL}/api/recipes/${editingRecipe.id}/`
       : `${BASE_URL}/api/recipes/`;
 
+    // Преобразуем FormData в объект для логирования и возможной отправки как JSON
+    const data = {};
+    formData.forEach((value, key) => {
+      if (key.startsWith('ingredient_')) {
+        if (!data.ingredients) data.ingredients = [];
+        data.ingredients.push(value);
+      } else if (key.startsWith('step_image_')) {
+        if (!data.step_images) data.step_images = [];
+        data.step_images.push(value); // Для файлов нужно будет отдельно обрабатывать
+      } else if (key.startsWith('attribute_name_')) {
+        const index = key.split('_')[2];
+        if (!data.attributes) data.attributes = [];
+        if (!data.attributes[index]) data.attributes[index] = {};
+        data.attributes[index].name = value;
+      } else if (key.startsWith('attribute_value_')) {
+        const index = key.split('_')[2];
+        if (!data.attributes) data.attributes = [];
+        if (!data.attributes[index]) data.attributes[index] = {};
+        data.attributes[index].value = value;
+      } else {
+        data[key] = value;
+      }
+    });
+
+    console.log('Данные, отправляемые на сервер:', data); // Логирование для отладки
+
+    // Для файлов (image и step_images) нужно отправлять FormData
+    const isMultipart = formData.has('image') || formData.has('step_image_0');
+    let response;
     try {
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: formData,
-      });
-      if (!response.ok) throw new Error('Ошибка сохранения рецепта');
+      if (isMultipart) {
+        // Отправляем как FormData, если есть файлы
+        response = await fetch(url, {
+          method: method,
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          },
+          body: formData,
+        });
+      } else {
+        // Отправляем как JSON, если файлов нет
+        response = await fetch(url, {
+          method: method,
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка сохранения рецепта: ${errorText}`);
+      }
       setShowForm(false);
       fetchRecipes();
     } catch (error) {
@@ -264,7 +326,10 @@ function AppContent() {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
-      if (!response.ok) throw new Error('Ошибка удаления рецепта');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка удаления рецепта: ${errorText}`);
+      }
       setRecipes(prev => prev.filter(r => r.id !== recipeId));
     } catch (error) {
       console.error("Ошибка удаления рецепта:", error);
