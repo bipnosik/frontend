@@ -1,7 +1,7 @@
 // frontend/src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
-import { FaSearch } from 'react-icons/fa'; // Удалены неиспользуемые FaBars и FaHeart
+import { FaSearch } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import RecipeCard from './RecipeCard';
 import RecipeDetails from './RecipeDetails';
@@ -26,7 +26,6 @@ function AppContent() {
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = React.useState(false);
   const navigate = useNavigate();
 
-  // Функции fetchSearchHistory и fetchRecentlyViewed определены до useEffect
   const fetchSearchHistory = React.useCallback(async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
@@ -47,11 +46,11 @@ function AppContent() {
       const updatedRecentlyViewed = Array.isArray(data)
         ? data.map(item => ({
             ...item.recipe,
-            image: item.recipe?.image ? `${BASE_URL}${item.recipe.image}` : '/default-image.jpg',
+            image: item.recipe?.image ? item.recipe.image : '/default-image.jpg',
             step_images: Array.isArray(item.recipe?.step_images)
-              ? item.recipe.step_images.map(img => `${BASE_URL}${img}`)
+              ? item.recipe.step_images
               : [],
-            user: item.recipe?.user ? item.recipe.user.username : null,
+            user: item.recipe?.user ? item.recipe.user : null,
             attributes: Array.isArray(item.recipe?.attributes) ? item.recipe.attributes : [],
             ingredients_list: Array.isArray(item.recipe?.ingredients_list)
               ? item.recipe.ingredients_list
@@ -74,7 +73,7 @@ function AppContent() {
       fetchSearchHistory();
       fetchRecentlyViewed();
     }
-  }, [fetchSearchHistory, fetchRecentlyViewed]); // Добавлены зависимости
+  }, [fetchSearchHistory, fetchRecentlyViewed]);
 
   const fetchWithAuth = async (url, options = {}) => {
     let token = localStorage.getItem('accessToken');
@@ -115,11 +114,11 @@ function AppContent() {
       const json = await response.json();
       const updatedRecipes = json.map(recipe => ({
         ...recipe,
-        image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
+        image: recipe.image ? recipe.image : '/default-image.jpg',
         step_images: Array.isArray(recipe.step_images)
-          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
+          ? recipe.step_images
           : [],
-        user: recipe.user ? recipe.user.username : null,
+        user: recipe.user ? recipe.user : null,
         attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
         ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
       }));
@@ -140,11 +139,11 @@ function AppContent() {
       const json = await response.json();
       const updatedRecipes = json.slice(0, 5).map(recipe => ({
         ...recipe,
-        image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
+        image: recipe.image ? recipe.image : '/default-image.jpg',
         step_images: Array.isArray(recipe.step_images)
-          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
+          ? recipe.step_images
           : [],
-        user: recipe.user ? recipe.user.username : null,
+        user: recipe.user ? recipe.user : null,
         attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
         ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
       }));
@@ -180,11 +179,11 @@ function AppContent() {
       const data = await response.json();
       const updatedRecipes = data.map(recipe => ({
         ...recipe,
-        image: recipe.image ? `${BASE_URL}${recipe.image}` : '/default-image.jpg',
+        image: recipe.image ? recipe.image : '/default-image.jpg',
         step_images: Array.isArray(recipe.step_images)
-          ? recipe.step_images.map(img => `${BASE_URL}${img}`)
+          ? recipe.step_images
           : [],
-        user: recipe.user ? recipe.user.username : null,
+        user: recipe.user ? recipe.user : null,
         attributes: Array.isArray(recipe.attributes) ? recipe.attributes : [],
         ingredients_list: Array.isArray(recipe.ingredients_list) ? recipe.ingredients_list : [],
       }));
@@ -256,63 +255,57 @@ function AppContent() {
       ? `${BASE_URL}/api/recipes/${editingRecipe.id}/`
       : `${BASE_URL}/api/recipes/`;
 
-    // Преобразуем FormData в объект для логирования и возможной отправки как JSON
-    const data = {};
+    // Извлекаем ингредиенты из FormData и преобразуем в массив
+    const ingredientsList = [];
     formData.forEach((value, key) => {
       if (key.startsWith('ingredient_')) {
-        if (!data.ingredients) data.ingredients = [];
-        data.ingredients.push(value);
-      } else if (key.startsWith('step_image_')) {
-        if (!data.step_images) data.step_images = [];
-        data.step_images.push(value); // Для файлов нужно будет отдельно обрабатывать
-      } else if (key.startsWith('attribute_name_')) {
-        const index = key.split('_')[2];
-        if (!data.attributes) data.attributes = [];
-        if (!data.attributes[index]) data.attributes[index] = {};
-        data.attributes[index].name = value;
-      } else if (key.startsWith('attribute_value_')) {
-        const index = key.split('_')[2];
-        if (!data.attributes) data.attributes = [];
-        if (!data.attributes[index]) data.attributes[index] = {};
-        data.attributes[index].value = value;
-      } else {
-        data[key] = value;
+        ingredientsList.push(value);
       }
     });
 
-    console.log('Данные, отправляемые на сервер:', data); // Логирование для отладки
+    // Создаём новый FormData с правильным форматом для ingredients_list
+    const updatedFormData = new FormData();
+    formData.forEach((value, key) => {
+      if (!key.startsWith('ingredient_')) {
+        updatedFormData.append(key, value);
+      }
+    });
+    updatedFormData.append('ingredients_list', JSON.stringify(ingredientsList));
 
-    // Для файлов (image и step_images) нужно отправлять FormData
-    const isMultipart = formData.has('image') || formData.has('step_image_0');
     let response;
     try {
-      if (isMultipart) {
-        // Отправляем как FormData, если есть файлы
-        response = await fetch(url, {
-          method: method,
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          },
-          body: formData,
-        });
-      } else {
-        // Отправляем как JSON, если файлов нет
-        response = await fetch(url, {
-          method: method,
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
-      }
+      response = await fetch(url, {
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+        body: updatedFormData,
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Ошибка сохранения рецепта: ${errorText}`);
       }
+
+      const savedRecipe = await response.json();
+      console.log('Сохранённый рецепт:', savedRecipe); // Логирование для отладки
+      const updatedRecipe = {
+        ...savedRecipe,
+        image: savedRecipe.image ? savedRecipe.image : '/default-image.jpg',
+        step_images: Array.isArray(savedRecipe.step_images) ? savedRecipe.step_images : [],
+        user: savedRecipe.user || localStorage.getItem('username'),
+        attributes: Array.isArray(savedRecipe.attributes) ? savedRecipe.attributes : [],
+        ingredients_list: Array.isArray(savedRecipe.ingredients_list)
+          ? savedRecipe.ingredients_list
+          : [],
+      };
+
       setShowForm(false);
-      fetchRecipes();
+      if (method === 'POST') {
+        setRecipes(prev => [updatedRecipe, ...prev]);
+      } else {
+        setRecipes(prev => prev.map(r => (r.id === updatedRecipe.id ? updatedRecipe : r)));
+      }
     } catch (error) {
       console.error('Ошибка сохранения рецепта:', error);
     }

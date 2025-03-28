@@ -1,6 +1,6 @@
-// frontend/src/RecipeDetails.js
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { FaHeart } from 'react-icons/fa';
 import './RecipeDetails.css';
 import { BASE_URL } from './config';
 
@@ -10,6 +10,7 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [selectedImage, setSelectedImage] = useState('');
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     fetch(`${BASE_URL}/api/recipes/${id}/`)
@@ -18,7 +19,6 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
         return response.json();
       })
       .then(data => {
-        console.log('Данные рецепта:', data);
         const updatedRecipe = {
           ...data,
           image: data.image
@@ -52,7 +52,61 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
         console.error('Ошибка загрузки комментариев:', error);
         setComments([]);
       });
-  }, [id]);
+
+    if (user) {
+      checkFavoriteStatus();
+    }
+  }, [id, user]);
+
+  const checkFavoriteStatus = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/favorites/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+      if (!response.ok) throw new Error('Ошибка при проверке избранного');
+      const favorites = await response.json();
+      const isFav = favorites.some(fav => fav.recipe.id === Number(id));
+      setIsFavorite(isFav);
+    } catch (error) {
+      console.error('Ошибка проверки избранного:', error);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      onOpenLogin();
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (isFavorite) {
+        const response = await fetch(`${BASE_URL}/api/favorites/${id}/`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) throw new Error('Ошибка удаления из избранного');
+        setIsFavorite(false);
+      } else {
+        const response = await fetch(`${BASE_URL}/api/favorites/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ recipe_id: id }),
+        });
+        if (!response.ok) throw new Error('Ошибка добавления в избранное');
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.error('Ошибка переключения избранного:', error);
+    }
+  };
 
   const handleCommentSubmit = (e) => {
     e.preventDefault();
@@ -92,63 +146,56 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
   });
 
   return (
-    <div className="recipe-details-page">
-      <h2>{recipe.name}</h2>
+    <div className="recipe-details">
+      <div className="recipe-header">
+        <h2>{recipe.name}</h2>
+        <button onClick={toggleFavorite} className="favorite-btn">
+          <FaHeart className={`favorite-icon ${isFavorite ? 'active' : ''}`} />
+        </button>
+      </div>
       <div className="recipe-details-container">
-        <div className="recipe-details-left">
-          <div className="main-image-container">
-            <img src={selectedImage} alt={recipe.name} className="main-image" />
+        <div className="recipe-image-section">
+          <div className="image-container">
+            <div className="main-image-container">
+              <img src={selectedImage} alt={recipe.name} className="main-image" />
+            </div>
+            <div className="step-images">
+              {recipe.step_images.map((image, index) => (
+                <img
+                  key={index}
+                  src={image}
+                  alt={`Step ${index + 1}`}
+                  className="step-image"
+                  onClick={() => handleStepImageClick(image)}
+                />
+              ))}
+            </div>
           </div>
-          <div className="recipe-description">
-            <p>{recipe.description}</p>
+          <div className="recipe-stats">
+            <span>Время: {recipe.cooking_time || 'N/A'} мин</span>
+            <span>Калории: {recipe.calories || 'N/A'} ккал</span>
           </div>
-          <div className="recipe-attributes">
-            {Array.isArray(recipe.attributes) && recipe.attributes.length > 0 ? (
-              recipe.attributes.map((attr, index) => (
-                <span key={index} className="attribute">
-                  {attr.name}: {attr.value}
-                </span>
-              ))
-            ) : (
-              <p>Атрибуты отсутствуют</p>
-            )}
+          <div className="description">
+            {recipe.description || 'Описание отсутствует'}
           </div>
         </div>
-        <div className="recipe-details-right">
-          <div className="step-images-container">
-            {Array.isArray(recipe.step_images) && recipe.step_images.length > 0 ? (
-              recipe.step_images.map((image, index) => (
-                <div
-                  key={index}
-                  className="step-image-wrapper"
-                  onClick={() => handleStepImageClick(image)}
-                >
-                  <span className="step-number">{index + 1}</span>
-                  <img src={image} alt={`Step ${index + 1}`} className="step-image" />
+        <div className="recipe-info">
+          <div className="ingredients-list">
+            <h3>Ингредиенты</h3>
+            {parsedIngredients.length > 0 ? (
+              parsedIngredients.map((ingredient, index) => (
+                <div key={index} className="ingredient-item">
+                  <span className="ingredient-quantity">{ingredient.quantity}</span>
+                  <span className="ingredient-name">{ingredient.name}</span>
                 </div>
               ))
             ) : (
-              <p>Пошаговые изображения отсутствуют.</p>
+              <p>Ингредиенты отсутствуют</p>
             )}
           </div>
-          <div className="ingredients-container">
-            <h3>Ингредиенты</h3>
-            <div className="ingredients-list">
-              {parsedIngredients.length > 0 ? (
-                parsedIngredients.map((ingredient, index) => (
-                  <div key={index} className="ingredient-item">
-                    <span className="ingredient-quantity">{ingredient.quantity}</span>
-                    <span className="ingredient-name">{ingredient.name}</span>
-                  </div>
-                ))
-              ) : (
-                <p>Ингредиенты отсутствуют</p>
-              )}
-            </div>
-          </div>
-          <div className="instructions-container">
+          <div className="instructions-list">
             <h3>Инструкции</h3>
-            <ol className="instructions-list">
+            <ol>
               {recipe.instructions && recipe.instructions.split('\n').length > 0 ? (
                 recipe.instructions.split('\n').map((step, index) => (
                   <li key={index}>{step}</li>
@@ -176,27 +223,26 @@ function RecipeDetails({ recipes, user, onOpenLogin, onOpenRegister }) {
         ) : (
           <p>Пока нет комментариев.</p>
         )}
+        {user ? (
+          <div className="comment-form">
+            <h4>Оставить комментарий</h4>
+            <form onSubmit={handleCommentSubmit}>
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Напишите ваш комментарий..."
+              />
+              <button type="submit" className="comment-btn">Отправить</button>
+            </form>
+          </div>
+        ) : (
+          <p>
+            Чтобы оставить комментарий,{' '}
+            <button onClick={onOpenLogin}>войдите</button> или{' '}
+            <button onClick={onOpenRegister}>зарегистрируйтесь</button>.
+          </p>
+        )}
       </div>
-
-      {user ? (
-        <div className="comment-form">
-          <h4>Оставить комментарий</h4>
-          <form onSubmit={handleCommentSubmit}>
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Напишите ваш комментарий..."
-            />
-            <button type="submit">Отправить</button>
-          </form>
-        </div>
-      ) : (
-        <p>
-          Чтобы оставить комментарий,{' '}
-          <button onClick={onOpenLogin}>войдите</button> или{' '}
-          <button onClick={onOpenRegister}>зарегистрируйтесь</button>.
-        </p>
-      )}
     </div>
   );
 }
